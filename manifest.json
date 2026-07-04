@@ -1,0 +1,891 @@
+{
+  "schemaVersion": "1.0",
+  "handle": "hl7_fhir-compat",
+  "did": "did:web:etzhayyim.com:actor:hl7_fhir-compat",
+  "kind": "compat",
+  "title": "hl7_fhir clean-room actor",
+  "description": "Clean-room, API-compatible healthcare HL7-FHIR / bioinformatics actor (hl7_fhir); runs browser-local on IPFS + kotoba-WASM.",
+  "wasmCid": "bafkreihdwergcwkl2t262im3pgegqonrbdv2t3m2uw7x3ykcco4zuoqqiq",
+  "wasmProvenance": "built-rust-raw",
+  "runtime": "kotoba-wasm",
+  "exec": "browser-local|donated-mesh",
+  "ipfs": "ipfs://bafkreihdwergcwkl2t262im3pgegqonrbdv2t3m2uw7x3ykcco4zuoqqiq",
+  "schema": "schema/hl7_fhir.kotoba",
+  "tier": "L5",
+  "verified": {
+    "source": "https://hl7.org/fhir/R4",
+    "verifiedAt": "2026-06-09",
+    "resources": [
+      "Patient",
+      "Observation",
+      "Encounter",
+      "MedicationRequest",
+      "AllergyIntolerance",
+      "Condition"
+    ],
+    "enums": {
+      "Patient": {
+        "gender": [
+          "male",
+          "female",
+          "other",
+          "unknown"
+        ]
+      },
+      "Observation": {
+        "status": [
+          "registered",
+          "preliminary",
+          "final",
+          "amended",
+          "corrected",
+          "cancelled",
+          "entered-in-error",
+          "unknown"
+        ]
+      },
+      "Encounter": {
+        "status": [
+          "planned",
+          "arrived",
+          "triaged",
+          "in-progress",
+          "onleave",
+          "finished",
+          "cancelled",
+          "entered-in-error",
+          "unknown"
+        ]
+      },
+      "MedicationRequest": {
+        "status": [
+          "active",
+          "on-hold",
+          "cancelled",
+          "completed",
+          "entered-in-error",
+          "stopped",
+          "draft",
+          "unknown"
+        ]
+      },
+      "AllergyIntolerance": {
+        "clinicalStatus": [
+          "active",
+          "inactive",
+          "resolved"
+        ]
+      },
+      "Condition": {
+        "clinicalStatus": [
+          "active",
+          "recurrence",
+          "relapse",
+          "inactive",
+          "remission",
+          "resolved"
+        ]
+      }
+    }
+  },
+  "entities": [
+    "Patient",
+    "Observation",
+    "Encounter",
+    "MedicationRequest",
+    "AllergyIntolerance",
+    "Condition"
+  ],
+  "adr": [
+    "260607",
+    "2606014500",
+    "2606013800",
+    "2606036000"
+  ],
+  "capabilities": {
+    "api": {
+      "type": "rest",
+      "runtime": "kotoba-wasm",
+      "endpointCount": 30,
+      "routes": [
+        {
+          "method": "POST",
+          "path": "/v1/patients",
+          "op": "create Patient"
+        },
+        {
+          "method": "GET",
+          "path": "/v1/patients",
+          "op": "list Patient"
+        },
+        {
+          "method": "GET",
+          "path": "/v1/patients/{id}",
+          "op": "get Patient"
+        },
+        {
+          "method": "PATCH",
+          "path": "/v1/patients/{id}",
+          "op": "update Patient"
+        },
+        {
+          "method": "DELETE",
+          "path": "/v1/patients/{id}",
+          "op": "delete Patient"
+        },
+        {
+          "method": "POST",
+          "path": "/v1/observations",
+          "op": "create Observation"
+        },
+        {
+          "method": "GET",
+          "path": "/v1/observations",
+          "op": "list Observation"
+        },
+        {
+          "method": "GET",
+          "path": "/v1/observations/{id}",
+          "op": "get Observation"
+        },
+        {
+          "method": "PATCH",
+          "path": "/v1/observations/{id}",
+          "op": "update Observation"
+        },
+        {
+          "method": "DELETE",
+          "path": "/v1/observations/{id}",
+          "op": "delete Observation"
+        },
+        {
+          "method": "POST",
+          "path": "/v1/encounters",
+          "op": "create Encounter"
+        },
+        {
+          "method": "GET",
+          "path": "/v1/encounters",
+          "op": "list Encounter"
+        },
+        {
+          "method": "GET",
+          "path": "/v1/encounters/{id}",
+          "op": "get Encounter"
+        },
+        {
+          "method": "PATCH",
+          "path": "/v1/encounters/{id}",
+          "op": "update Encounter"
+        },
+        {
+          "method": "DELETE",
+          "path": "/v1/encounters/{id}",
+          "op": "delete Encounter"
+        },
+        {
+          "method": "POST",
+          "path": "/v1/medicationrequests",
+          "op": "create MedicationRequest"
+        },
+        {
+          "method": "GET",
+          "path": "/v1/medicationrequests",
+          "op": "list MedicationRequest"
+        },
+        {
+          "method": "GET",
+          "path": "/v1/medicationrequests/{id}",
+          "op": "get MedicationRequest"
+        },
+        {
+          "method": "PATCH",
+          "path": "/v1/medicationrequests/{id}",
+          "op": "update MedicationRequest"
+        },
+        {
+          "method": "DELETE",
+          "path": "/v1/medicationrequests/{id}",
+          "op": "delete MedicationRequest"
+        },
+        {
+          "method": "POST",
+          "path": "/v1/allergyintolerances",
+          "op": "create AllergyIntolerance"
+        },
+        {
+          "method": "GET",
+          "path": "/v1/allergyintolerances",
+          "op": "list AllergyIntolerance"
+        },
+        {
+          "method": "GET",
+          "path": "/v1/allergyintolerances/{id}",
+          "op": "get AllergyIntolerance"
+        },
+        {
+          "method": "PATCH",
+          "path": "/v1/allergyintolerances/{id}",
+          "op": "update AllergyIntolerance"
+        },
+        {
+          "method": "DELETE",
+          "path": "/v1/allergyintolerances/{id}",
+          "op": "delete AllergyIntolerance"
+        },
+        {
+          "method": "POST",
+          "path": "/v1/conditions",
+          "op": "create Condition"
+        },
+        {
+          "method": "GET",
+          "path": "/v1/conditions",
+          "op": "list Condition"
+        },
+        {
+          "method": "GET",
+          "path": "/v1/conditions/{id}",
+          "op": "get Condition"
+        },
+        {
+          "method": "PATCH",
+          "path": "/v1/conditions/{id}",
+          "op": "update Condition"
+        },
+        {
+          "method": "DELETE",
+          "path": "/v1/conditions/{id}",
+          "op": "delete Condition"
+        }
+      ],
+      "features": {
+        "pagination": true,
+        "filtering": true,
+        "relationExpansion": true,
+        "strictValidation": true,
+        "contractTest": true
+      },
+      "health": "/healthz"
+    },
+    "supplychain": {
+      "type": "cyclonedx-sbom",
+      "runtime": "kotoba-wasm",
+      "sbom": "manifest:supplychain.sbom",
+      "sbomData": {
+        "bomFormat": "CycloneDX",
+        "specVersion": "1.5",
+        "metadata": {
+          "component": {
+            "type": "application",
+            "name": "hl7_fhir-compat",
+            "purl": "pkg:etzhayyim/hl7_fhir-compat"
+          }
+        },
+        "components": [
+          {
+            "type": "library",
+            "name": "kotoba",
+            "scope": "required",
+            "purl": "pkg:etzhayyim/kotoba"
+          },
+          {
+            "type": "library",
+            "name": "kotodama-wasm",
+            "scope": "required",
+            "purl": "pkg:etzhayyim/kotodama-wasm"
+          },
+          {
+            "type": "library",
+            "name": "datomic-client",
+            "scope": "required",
+            "purl": "pkg:etzhayyim/datomic-client"
+          }
+        ]
+      },
+      "adr": [
+        "2606036000"
+      ]
+    },
+    "socialpost": {
+      "type": "datom-event-feed",
+      "runtime": "kotoba-wasm",
+      "lexicon": "app.bsky.feed.post",
+      "source": "hl7_fhir.* Datom events",
+      "mode": "dry-run",
+      "gate": "G8"
+    },
+    "mcp": {
+      "type": "model-context-protocol",
+      "runtime": "kotoba-wasm",
+      "transport": "ipfs+kotoba-wasm",
+      "toolCount": 30,
+      "tools": [
+        {
+          "name": "create_patient",
+          "description": "Create a Patient.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "resourceType": {
+                "type": "string"
+              },
+              "gender": {
+                "type": "string"
+              },
+              "birthDate": {
+                "type": "string"
+              },
+              "active": {
+                "type": "boolean"
+              },
+              "deceasedBoolean": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "id",
+              "resourceType"
+            ]
+          }
+        },
+        {
+          "name": "list_patients",
+          "description": "List Patients.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {}
+          }
+        },
+        {
+          "name": "get_patient",
+          "description": "Get a Patient by id.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id"
+            ]
+          }
+        },
+        {
+          "name": "update_patient",
+          "description": "Update a Patient.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "resourceType": {
+                "type": "string"
+              },
+              "gender": {
+                "type": "string"
+              },
+              "birthDate": {
+                "type": "string"
+              },
+              "active": {
+                "type": "boolean"
+              },
+              "deceasedBoolean": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "id"
+            ]
+          }
+        },
+        {
+          "name": "delete_patient",
+          "description": "Delete a Patient.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id"
+            ]
+          }
+        },
+        {
+          "name": "create_observation",
+          "description": "Create a Observation.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "resourceType": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string"
+              },
+              "effectiveDateTime": {
+                "type": "string"
+              },
+              "valueString": {
+                "type": "string"
+              },
+              "issued": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "resourceType"
+            ]
+          }
+        },
+        {
+          "name": "list_observations",
+          "description": "List Observations.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {}
+          }
+        },
+        {
+          "name": "get_observation",
+          "description": "Get a Observation by id.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id"
+            ]
+          }
+        },
+        {
+          "name": "update_observation",
+          "description": "Update a Observation.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "resourceType": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string"
+              },
+              "effectiveDateTime": {
+                "type": "string"
+              },
+              "valueString": {
+                "type": "string"
+              },
+              "issued": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id"
+            ]
+          }
+        },
+        {
+          "name": "delete_observation",
+          "description": "Delete a Observation.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id"
+            ]
+          }
+        },
+        {
+          "name": "create_encounter",
+          "description": "Create a Encounter.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "resourceType": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string"
+              },
+              "serviceType": {
+                "type": "string"
+              },
+              "period": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "resourceType"
+            ]
+          }
+        },
+        {
+          "name": "list_encounters",
+          "description": "List Encounters.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {}
+          }
+        },
+        {
+          "name": "get_encounter",
+          "description": "Get a Encounter by id.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id"
+            ]
+          }
+        },
+        {
+          "name": "update_encounter",
+          "description": "Update a Encounter.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "resourceType": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string"
+              },
+              "serviceType": {
+                "type": "string"
+              },
+              "period": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id"
+            ]
+          }
+        },
+        {
+          "name": "delete_encounter",
+          "description": "Delete a Encounter.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id"
+            ]
+          }
+        },
+        {
+          "name": "create_medication_request",
+          "description": "Create a MedicationRequest.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "resourceType": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string"
+              },
+              "intent": {
+                "type": "string"
+              },
+              "authoredOn": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "resourceType"
+            ]
+          }
+        },
+        {
+          "name": "list_medication_requests",
+          "description": "List MedicationRequests.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {}
+          }
+        },
+        {
+          "name": "get_medication_request",
+          "description": "Get a MedicationRequest by id.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id"
+            ]
+          }
+        },
+        {
+          "name": "update_medication_request",
+          "description": "Update a MedicationRequest.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "resourceType": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string"
+              },
+              "intent": {
+                "type": "string"
+              },
+              "authoredOn": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id"
+            ]
+          }
+        },
+        {
+          "name": "delete_medication_request",
+          "description": "Delete a MedicationRequest.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id"
+            ]
+          }
+        },
+        {
+          "name": "create_allergy_intolerance",
+          "description": "Create a AllergyIntolerance.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "resourceType": {
+                "type": "string"
+              },
+              "clinicalStatus": {
+                "type": "string"
+              },
+              "criticality": {
+                "type": "string"
+              },
+              "recordedDate": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "resourceType"
+            ]
+          }
+        },
+        {
+          "name": "list_allergy_intolerances",
+          "description": "List AllergyIntolerances.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {}
+          }
+        },
+        {
+          "name": "get_allergy_intolerance",
+          "description": "Get a AllergyIntolerance by id.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id"
+            ]
+          }
+        },
+        {
+          "name": "update_allergy_intolerance",
+          "description": "Update a AllergyIntolerance.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "resourceType": {
+                "type": "string"
+              },
+              "clinicalStatus": {
+                "type": "string"
+              },
+              "criticality": {
+                "type": "string"
+              },
+              "recordedDate": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id"
+            ]
+          }
+        },
+        {
+          "name": "delete_allergy_intolerance",
+          "description": "Delete a AllergyIntolerance.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id"
+            ]
+          }
+        },
+        {
+          "name": "create_condition",
+          "description": "Create a Condition.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "resourceType": {
+                "type": "string"
+              },
+              "clinicalStatus": {
+                "type": "string"
+              },
+              "recordedDate": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "resourceType"
+            ]
+          }
+        },
+        {
+          "name": "list_conditions",
+          "description": "List Conditions.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {}
+          }
+        },
+        {
+          "name": "get_condition",
+          "description": "Get a Condition by id.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id"
+            ]
+          }
+        },
+        {
+          "name": "update_condition",
+          "description": "Update a Condition.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "resourceType": {
+                "type": "string"
+              },
+              "clinicalStatus": {
+                "type": "string"
+              },
+              "recordedDate": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id"
+            ]
+          }
+        },
+        {
+          "name": "delete_condition",
+          "description": "Delete a Condition.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}
