@@ -217,6 +217,27 @@
   (when (and spec (not ((:pred spec) record)))
     {:error {:message (:message spec) :type "invalid_request_error"}}))
 
+(defn reject-non-map
+  "Guards handle-create/handle-update against a request body that isn't a
+  JSON object at all (a bare string, number, boolean, or array) -- every
+  downstream step assumes `data` is associative: reject-unknown's
+  `(keys data)` throws ClassCastException on a string (chars aren't
+  MapEntry) or IllegalArgumentException on a number (no ISeq), and
+  handle-update's `reduce-kv` over a non-map `data` fails the same way.
+  Found + fixed during a 2026-07-08 health-check pass modeled on the
+  etzhayyim/iryo capability-gate date-parse fix: like a malformed date
+  string there, a malformed request-body *shape* here broke the otherwise
+  -uniform discipline that every malformed input degrades to a 400
+  {:error ...} response rather than crashing uncaught. `nil` is exempted
+  (passes through to require-fields's own \"missing required fields\"
+  message, its pre-existing and never-crashing behavior) -- only a
+  concretely wrong-shaped non-nil body is rejected here. Returns nil (pass)
+  for maps and nil, an error map otherwise."
+  [data]
+  (when (and (some? data) (not (map? data)))
+    {:error {:message "Request body must be a JSON object"
+             :type "invalid_request_error"}}))
+
 ;; --- list helpers ---
 (defn apply-filters [rows params fields]
   (reduce (fn [out f]
@@ -252,7 +273,8 @@
 (defn handle-create [store entity data]
   (let [{:keys [fields required coerce id-prefix validate]
          record-spec :validate-record} (spec-for entity)]
-    (or (some-> (reject-unknown data fields) (vector 400))
+    (or (some-> (reject-non-map data) (vector 400))
+        (some-> (reject-unknown data fields) (vector 400))
         (some-> (require-fields data required) (vector 400))
         (some-> (validate-fields data validate) (vector 400))
         (let [base {:id (new-id id-prefix)}
@@ -277,7 +299,8 @@
         rows (query store entity id)]
     (if (empty? rows)
       (not-found)
-      (or (some-> (reject-unknown data fields) (vector 400))
+      (or (some-> (reject-non-map data) (vector 400))
+          (some-> (reject-unknown data fields) (vector 400))
           (some-> (validate-fields data validate) (vector 400))
           (let [merged (reduce-kv (fn [m k v] (if (#{:id :createdAt} k) m (assoc m k v)))
                                   (first rows) data)]

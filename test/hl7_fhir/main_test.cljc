@@ -37,6 +37,38 @@
         (is (= 400 (second (m/handle-create s entity {}))) (str entity " missing-required"))
         (is (= 400 (second (m/handle-create s entity (assoc (full-record spec) :__bogus__ 1)))) (str entity " unknown"))))))
 
+;; ── FIXED (2026-07-08 health-check pass, modeled on the etzhayyim/iryo
+;; capability-gate malformed-date fix) ── a request body that isn't a JSON
+;; object at all (a bare string, number, or non-empty array) used to crash
+;; handle-create/handle-update UNCAUGHT (ClassCastException via
+;; reject-unknown's `(keys data)` on a string; IllegalArgumentException on a
+;; number/`reduce-kv`), instead of degrading to a 400 like every other
+;; malformed-input case in this namespace (missing/unknown/malformed-format
+;; fields). `reject-non-map` now gates handle-create/handle-update on
+;; `(map? data)` before any of that runs.
+(deftest malformed-request-body-degrades-gracefully-not-a-crash
+  (doseq [{:keys [entity] :as spec} m/entity-specs]
+    (doseq [bad-body ["not-a-map" 123 [1 2 3] true]]
+      (testing (str entity " create with body " (pr-str bad-body))
+        (let [s (m/fresh-store)
+              [body status] (m/handle-create s entity bad-body)]
+          (is (= 400 status))
+          (is (= "Request body must be a JSON object" (:message (:error body))))))
+      (testing (str entity " update with body " (pr-str bad-body))
+        (let [s (m/fresh-store)
+              [rec _] (m/handle-create s entity (full-record spec))
+              [body status] (m/handle-update s entity (:id rec) bad-body)]
+          (is (= 400 status))
+          (is (= "Request body must be a JSON object" (:message (:error body)))))))
+    ;; regression guard: nil is exempted from this fix (it never crashed --
+    ;; `(keys nil)`/`(get nil f)` are already nil-safe) and keeps degrading
+    ;; via the pre-existing require-fields "missing required fields" path.
+    (testing (str entity " create with nil body (pre-existing, unaffected)")
+      (let [s (m/fresh-store)
+            [body status] (m/handle-create s entity nil)]
+        (is (= 400 status))
+        (is (re-find #"Missing required fields" (:message (:error body))))))))
+
 (deftest coercion
   (doseq [{:keys [entity coerce] :as spec} m/entity-specs]
     (when (seq coerce)
