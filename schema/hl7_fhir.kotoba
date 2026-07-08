@@ -107,4 +107,30 @@ namespace hl7_fhir {
         updatedAt: datetime
     }
 
+    // Added by hand (ADR-2607083200), not by deepen_actors.py: EU EHDS
+    // (Regulation (EU) 2025/327) Article 3 primary-use access request.
+    // accessMethod is format-validated (view/download) and
+    // restrictionApplied/restrictionReason are cross-field-validated
+    // (restrictionApplied=true requires a non-blank restrictionReason) in
+    // src/hl7_fhir/main.cljc's entity-specs (:validate / :validate-record),
+    // backed by src/hl7_fhir/validation.cljc (valid-ehds-access-method?,
+    // valid-ehds-restriction?) -- this schema block documents the shape but
+    // the validators are the enforcement point, not this file.
+    // priorityCategory is intentionally a bare boolean, not an enumerated
+    // category list: Article 14 (which defines the priority-categories
+    // list) has not been retrieved from a primary source yet, so the
+    // category values themselves are not modeled -- see README.
+    entity PatientAccessRequest {
+        id: string @unique
+        resourceType: string
+        patientId: string
+        priorityCategory: boolean
+        accessMethod: string
+        restrictionApplied: boolean
+        restrictionReason: string
+        status: string
+        createdAt: datetime
+        updatedAt: datetime
+    }
+
 }

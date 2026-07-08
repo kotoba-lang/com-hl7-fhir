@@ -13,14 +13,19 @@
   facts (`hl7_fhir.<Entity>/<field>`); `*store*` is the in-memory materialization
   used by the contract test and by the WASM runtime before a live engine binds.
 
-  The `Claim` and `Consent` entities are the exceptions to \"resource shapes
-  only\": their `:validate` maps wire real domain format checks into the
-  generic create/update handlers -- `Claim` for US billing identifiers (NPI
-  / ICD-10-CM / CPT-HCPCS) and `Consent` for the EU GDPR Art. 9(2)
-  special-category-data lawful-basis code (see `hl7-fhir.validation`) -- so
-  a claim with a malformed billing NPI, or a consent record citing a
-  lawful-basis code that isn't one of the Regulation's ten, is rejected
-  with 400 instead of silently persisted."
+  The `Claim`, `Consent` and `PatientAccessRequest` entities are the
+  exceptions to \"resource shapes only\": their `:validate` (and, for
+  PatientAccessRequest, `:validate-record`) keys wire real domain format
+  checks into the generic create/update handlers -- `Claim` for US billing
+  identifiers (NPI / ICD-10-CM / CPT-HCPCS), `Consent` for the EU GDPR
+  Art. 9(2) special-category-data lawful-basis code, and
+  `PatientAccessRequest` for the EU EHDS (Regulation (EU) 2025/327)
+  Article 3 primary-use access-method enum plus its Article 3(3)
+  restriction/reason cross-field rule (see `hl7-fhir.validation`) -- so a
+  claim with a malformed billing NPI, a consent record citing a
+  lawful-basis code that isn't one of the Regulation's ten, or an access
+  request that flags a restriction without recording why, is rejected with
+  400 instead of silently persisted."
   (:require [clojure.string :as str]
             [hl7-fhir.validation :as validation]))
 
@@ -83,6 +88,28 @@
     :validate {:lawfulBasisArt9 validation/valid-gdpr-art9-lawful-basis?}
     :sample {:resourceType "Consent" :patientId "hl7fhir_pat_sample0000000000"
              :specialCategoryData true :lawfulBasisArt9 "h" :status "active"}
+    :refs {}}
+   ;; EU EHDS (Regulation (EU) 2025/327) Article 3 primary-use access
+   ;; request (ADR-2607083200 EHDS Article 3 increment). Article 3(1)-(3) is
+   ;; the only portion of EHDS with a verified primary-source reading to
+   ;; hand -- see orgs/kotoba-lang/emr-claims-primary-sources/eu-ehds/
+   ;; ehds-article3-excerpt.md (verbatim excerpt, retrieved via a real-
+   ;; browser EUR-Lex session on 2026-07-08, CELEX:32025R0327). Article 14
+   ;; (the priority-categories list) and Article 15 (the exchange-format
+   ;; schema) are cross-referenced by Article 3 but not yet retrieved, so
+   ;; this entity deliberately does NOT enumerate priority categories
+   ;; (`priorityCategory` is only a boolean flag) or model the exchange
+   ;; format's internal structure -- see README for the scope note.
+   {:entity "PatientAccessRequest" :plural "patientaccessrequests" :id-prefix "hl7fhir_par"
+    :fields [:resourceType :patientId :priorityCategory :accessMethod
+             :restrictionApplied :restrictionReason :status]
+    :required [:resourceType :patientId :accessMethod]
+    :coerce {:priorityCategory :bool :restrictionApplied :bool}
+    :validate {:accessMethod validation/valid-ehds-access-method?}
+    :validate-record {:pred validation/valid-ehds-restriction?
+                       :message "restrictionApplied requires a non-blank restrictionReason (EHDS Art. 3(3))"}
+    :sample {:resourceType "PatientAccessRequest" :patientId "hl7fhir_pat_sample0000000000"
+             :priorityCategory true :accessMethod "view" :restrictionApplied false :status "active"}
     :refs {}}])
 
 (def entities (mapv :entity entity-specs))
@@ -175,6 +202,21 @@
       {:error {:message (str "Invalid field format: " (str/join ", " (map (comp name first) failed)))
                :type "invalid_request_error"}})))
 
+(defn validate-record
+  "Run a whole-record cross-field predicate from an entity-spec's
+  :validate-record key ({:pred (fn [record]) :message str}), complementing
+  validate-fields (which only ever sees one field's own value) for
+  constraints that span more than one field -- e.g.
+  PatientAccessRequest's restrictionApplied=true requiring a non-blank
+  restrictionReason (EHDS Art. 3(3)). `record` must be the fully merged
+  record (create: the coerced new record; update: the existing record with
+  the incoming patch applied), not just the raw incoming patch, so the
+  predicate can see fields the caller didn't touch in this call. No-op
+  (returns nil) when the entity-spec has no :validate-record."
+  [record spec]
+  (when (and spec (not ((:pred spec) record)))
+    {:error {:message (:message spec) :type "invalid_request_error"}}))
+
 ;; --- list helpers ---
 (defn apply-filters [rows params fields]
   (reduce (fn [out f]
@@ -208,15 +250,17 @@
 (defn- not-found [] [{:error {:message "Not found" :type "not_found"}} 404])
 
 (defn handle-create [store entity data]
-  (let [{:keys [fields required coerce id-prefix validate]} (spec-for entity)]
+  (let [{:keys [fields required coerce id-prefix validate]
+         record-spec :validate-record} (spec-for entity)]
     (or (some-> (reject-unknown data fields) (vector 400))
         (some-> (require-fields data required) (vector 400))
         (some-> (validate-fields data validate) (vector 400))
         (let [base {:id (new-id id-prefix)}
-              rec (reduce (fn [m f] (assoc m f (coerce-field (get coerce f) (get data f)))) base fields)
-              rec (assoc rec :createdAt (now) :updatedAt (now))]
-          (persist! store entity rec)
-          [rec 201]))))
+              rec (reduce (fn [m f] (assoc m f (coerce-field (get coerce f) (get data f)))) base fields)]
+          (or (some-> (validate-record rec record-spec) (vector 400))
+              (let [rec (assoc rec :createdAt (now) :updatedAt (now))]
+                (persist! store entity rec)
+                [rec 201]))))))
 
 (defn handle-list [store entity params]
   (let [{:keys [fields]} (spec-for entity)
@@ -229,16 +273,18 @@
     (if (empty? rows) (not-found) [(expand store (first rows) params refs) 200])))
 
 (defn handle-update [store entity id data]
-  (let [{:keys [fields validate]} (spec-for entity) rows (query store entity id)]
+  (let [{:keys [fields validate] record-spec :validate-record} (spec-for entity)
+        rows (query store entity id)]
     (if (empty? rows)
       (not-found)
       (or (some-> (reject-unknown data fields) (vector 400))
           (some-> (validate-fields data validate) (vector 400))
-          (let [rec (reduce-kv (fn [m k v] (if (#{:id :createdAt} k) m (assoc m k v)))
-                               (first rows) data)
-                rec (assoc rec :updatedAt (now))]
-            (persist! store entity rec)
-            [rec 200])))))
+          (let [merged (reduce-kv (fn [m k v] (if (#{:id :createdAt} k) m (assoc m k v)))
+                                  (first rows) data)]
+            (or (some-> (validate-record merged record-spec) (vector 400))
+                (let [rec (assoc merged :updatedAt (now))]
+                  (persist! store entity rec)
+                  [rec 200])))))))
 
 (defn handle-delete [store entity id]
   (if (empty? (query store entity id)) (not-found) [(retract! store entity id) 200]))

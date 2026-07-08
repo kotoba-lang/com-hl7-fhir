@@ -99,3 +99,72 @@ deftest for pass/fail coverage (all ten point-letters accepted, an
 out-of-set code and the full exception label both rejected, and that
 `handle-update` enforces the same check). `bb test`: 11 deftests / 203
 assertions as of this pass (up from 9/148).
+
+## Maturity note (2026-07-08, ADR-2607083200) -- EU: EHDS Article 3 (Regulation (EU) 2025/327)
+
+Follow-up closing the item the pass above explicitly deferred: EHDS
+(European Health Data Space) was "considered but not implemented" because
+that pass "did not have a verified primary-source reading of its operative
+articles to hand". This pass does: EUR-Lex blocks automated `curl`/headless
+fetches with an AWS WAF JS challenge, so the operative text was retrieved by
+navigating EUR-Lex in a real (non-automated) browser session on 2026-07-08
+and extracting Article 3's rendered text verbatim. The excerpt is archived,
+with full retrieval-method provenance, at
+[`kotoba-lang/emr-claims-primary-sources`](https://github.com/kotoba-lang/emr-claims-primary-sources)'s
+`eu-ehds/ehds-article3-excerpt.md` (CELEX:32025R0327, Regulation (EU)
+2025/327 of 11 February 2025).
+
+Adds a `PatientAccessRequest` entity modeling **Article 3 ("Right of natural
+persons to access their personal electronic health data"), paragraphs
+(1)-(3) only** -- the only EHDS text with a verified primary-source reading
+to hand:
+
+- `priorityCategory` (boolean) -- whether the underlying record belongs to
+  the "priority categories" Article 3(1)/(2) refer to. **This is a bare
+  flag, not an enumerated category list**: the priority-categories list
+  itself is defined in **Article 14**, which has not yet been retrieved
+  from a primary source -- inventing that list here would be exactly the
+  kind of unverified-legal-content guess this codebase's working agreement
+  forbids.
+- `accessMethod` (enum `"view"` / `"download"`, case-insensitive, required)
+  -- `"view"` is Art. 3(1) (immediate, free, easily-readable/consolidated
+  access once data is registered in an EHR system); `"download"` is
+  Art. 3(2) (a free electronic copy in the European electronic health
+  record exchange format). Validated by
+  `hl7-fhir.validation/valid-ehds-access-method?`; anything else is
+  rejected with 400.
+- `restrictionApplied` (boolean) + `restrictionReason` (optional string) --
+  Art. 3(3): a Member State may restrict/delay both rights "in accordance
+  with Article 23" of GDPR (Regulation (EU) 2016/679), e.g. for
+  patient-safety/ethical reasons. Enforced by a new **cross-field**
+  validator, `hl7-fhir.validation/valid-ehds-restriction?`, wired through a
+  new entity-spec key `:validate-record` (complementing the existing
+  single-field `:validate`): `restrictionApplied=true` with a blank/absent
+  `restrictionReason` is rejected with 400 on both create and update (update
+  checks the *merged* record, so patching only `restrictionApplied` against
+  an existing reason-less record is still caught).
+
+**Explicitly out of scope / not implemented, and why**: Article 3
+cross-references three other articles that were confirmed to exist but
+whose text has **not** been retrieved yet -- Article 14 (the
+priority-categories list itself), Article 4 (the "electronic health data
+access services" definition) and Article 15 (the European electronic health
+record exchange format's technical schema). None of the three is modeled:
+`priorityCategory` stays a boolean flag (no category enum), `accessMethod`
+only names Article 15 as an external format citation (no exchange-format
+data structure), and no `electronic health data access service` entity is
+added. This is the same "verified primary source or explicit not-yet-done
+note, never a guess" discipline the GDPR Art. 9(2) pass above follows.
+Fetching Article 14/15 (ideally via the same real-browser EUR-Lex
+navigation this pass used, since automated fetches are WAF-blocked) is left
+for a follow-up increment.
+
+See `src/hl7_fhir/validation.cljc` (`valid-ehds-access-method?` /
+`valid-ehds-restriction?`, with the scope caveats inline) and
+`test/hl7_fhir/validation_test.cljc`'s `ehds-access-method-format` /
+`ehds-restriction-cross-field` deftests / `test/hl7_fhir/main_test.cljc`'s
+`patient-access-request-domain-validation` deftest for pass/fail coverage
+(both access methods and case-insensitivity accepted, an out-of-set method
+rejected, a restriction without a reason rejected on both create and merged
+update, a restriction with a reason accepted). `bb test`: 14 deftests / 256
+assertions as of this pass (up from 11/203).

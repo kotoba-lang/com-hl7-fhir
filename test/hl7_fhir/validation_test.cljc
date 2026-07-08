@@ -65,3 +65,32 @@
   (testing "non-string input is rejected, not thrown"
     (is (false? (v/valid-gdpr-art9-lawful-basis? nil)))
     (is (false? (v/valid-gdpr-art9-lawful-basis? :a)))))
+
+(deftest ehds-access-method-format
+  (testing "the two Article 3 access methods are accepted"
+    (is (true? (v/valid-ehds-access-method? "view")))
+    (is (true? (v/valid-ehds-access-method? "download"))))
+  (testing "case-insensitive"
+    (is (true? (v/valid-ehds-access-method? "VIEW")))
+    (is (true? (v/valid-ehds-access-method? "Download"))))
+  (testing "any other value is rejected"
+    (doseq [v ["print" "share" "" "view download" "viewer"]]
+      (is (false? (v/valid-ehds-access-method? v)) v)))
+  (testing "non-string input is rejected, not thrown"
+    (is (false? (v/valid-ehds-access-method? nil)))
+    (is (false? (v/valid-ehds-access-method? :view)))))
+
+(deftest ehds-restriction-cross-field
+  (testing "no restriction applied passes regardless of reason"
+    (is (true? (v/valid-ehds-restriction? {:restrictionApplied false})))
+    (is (true? (v/valid-ehds-restriction? {})))
+    (is (true? (v/valid-ehds-restriction? {:restrictionApplied false :restrictionReason nil}))))
+  (testing "restriction applied with a non-blank reason passes"
+    (is (true? (v/valid-ehds-restriction?
+                {:restrictionApplied true
+                 :restrictionReason "Art. 23 GDPR patient-safety delay pending clinician review"}))))
+  (testing "restriction applied without a reason fails"
+    (is (false? (v/valid-ehds-restriction? {:restrictionApplied true})))
+    (is (false? (v/valid-ehds-restriction? {:restrictionApplied true :restrictionReason nil})))
+    (is (false? (v/valid-ehds-restriction? {:restrictionApplied true :restrictionReason ""})))
+    (is (false? (v/valid-ehds-restriction? {:restrictionApplied true :restrictionReason "   "})))))

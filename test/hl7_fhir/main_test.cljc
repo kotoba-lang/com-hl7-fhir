@@ -137,3 +137,77 @@
           [body status] (m/handle-update s "Consent" (:id rec) {:lawfulBasisArt9 "zz"})]
       (is (= 400 status))
       (is (str/includes? (get-in body [:error :message]) "lawfulBasisArt9")))))
+
+;; --- PatientAccessRequest: EU EHDS Article 3 validation (ADR-2607083200) ---
+;; Same rationale as claim-domain-validation / consent-domain-validation
+;; above, plus a new dimension: PatientAccessRequest is the first entity
+;; whose :validate-record is a *cross-field* rule (restrictionApplied=true
+;; requires a non-blank restrictionReason), not a single-field format
+;; check, so this deftest also exercises that the cross-field rule is
+;; enforced on create and on update -- including when update only patches
+;; one of the two fields and the merged (not the raw patch) record must be
+;; checked.
+(def ^:private access-request-sample
+  (:sample (first (filter #(= "PatientAccessRequest" (:entity %)) m/entity-specs))))
+
+(deftest patient-access-request-domain-validation
+  (testing "a fully valid view request is accepted"
+    (let [s (m/fresh-store) [rec status] (m/handle-create s "PatientAccessRequest" access-request-sample)]
+      (is (= 201 status))
+      (is (str/starts-with? (:id rec) "hl7fhir_par_"))
+      (is (true? (:priorityCategory rec)))
+      (is (false? (:restrictionApplied rec)))))
+  (testing "a download request is accepted"
+    (let [s (m/fresh-store)
+          [_ status] (m/handle-create s "PatientAccessRequest" (assoc access-request-sample :accessMethod "download"))]
+      (is (= 201 status))))
+  (testing "accessMethod is case-insensitive"
+    (let [s (m/fresh-store)
+          [_ status] (m/handle-create s "PatientAccessRequest" (assoc access-request-sample :accessMethod "VIEW"))]
+      (is (= 201 status))))
+  (testing "an accessMethod outside view/download is rejected"
+    (let [s (m/fresh-store)
+          [body status] (m/handle-create s "PatientAccessRequest" (assoc access-request-sample :accessMethod "print"))]
+      (is (= 400 status))
+      (is (str/includes? (get-in body [:error :message]) "accessMethod"))))
+  (testing "restrictionApplied=true without restrictionReason is rejected"
+    (let [s (m/fresh-store)
+          [body status] (m/handle-create s "PatientAccessRequest"
+                                          (assoc access-request-sample :restrictionApplied true))]
+      (is (= 400 status))
+      (is (str/includes? (get-in body [:error :message]) "restrictionReason"))))
+  (testing "restrictionApplied=true with a non-blank restrictionReason is accepted"
+    (let [s (m/fresh-store)
+          [rec status] (m/handle-create s "PatientAccessRequest"
+                                         (assoc access-request-sample
+                                                :restrictionApplied true
+                                                :restrictionReason "Art. 23 GDPR patient-safety delay"))]
+      (is (= 201 status))
+      (is (true? (:restrictionApplied rec)))))
+  (testing "priorityCategory coerces truthy wire values to boolean"
+    (let [s (m/fresh-store)
+          [rec _] (m/handle-create s "PatientAccessRequest" (assoc access-request-sample :priorityCategory "true"))]
+      (is (true? (:priorityCategory rec)))))
+  (testing "update enforces the accessMethod format check on a present field"
+    (let [s (m/fresh-store)
+          [rec _] (m/handle-create s "PatientAccessRequest" access-request-sample)
+          [body status] (m/handle-update s "PatientAccessRequest" (:id rec) {:accessMethod "print"})]
+      (is (= 400 status))
+      (is (str/includes? (get-in body [:error :message]) "accessMethod"))))
+  (testing "update enforces the restriction cross-field rule against the merged record"
+    (let [s (m/fresh-store)
+          [rec _] (m/handle-create s "PatientAccessRequest" access-request-sample)
+          ;; patch only restrictionApplied -- restrictionReason isn't in this
+          ;; patch, but the *merged* record (existing reason-less record +
+          ;; this patch) must still be checked, not just the raw patch.
+          [body status] (m/handle-update s "PatientAccessRequest" (:id rec) {:restrictionApplied true})]
+      (is (= 400 status))
+      (is (str/includes? (get-in body [:error :message]) "restrictionReason"))))
+  (testing "update accepts restrictionApplied=true when the patch also supplies a reason"
+    (let [s (m/fresh-store)
+          [rec _] (m/handle-create s "PatientAccessRequest" access-request-sample)
+          [updated status] (m/handle-update s "PatientAccessRequest" (:id rec)
+                                             {:restrictionApplied true
+                                              :restrictionReason "Art. 23 GDPR patient-safety delay"})]
+      (is (= 200 status))
+      (is (true? (:restrictionApplied updated))))))

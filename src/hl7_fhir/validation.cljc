@@ -2,8 +2,10 @@
   "Structural (format-only) validators for identifiers that a US healthcare
   claim actually carries on the wire: the CMS-1500 / UB-04 paper forms and
   the X12 837 professional/institutional claim transaction set. Also holds
-  the EU GDPR Art. 9(2) special-category-data lawful-basis code validator
-  (see that section below for scope/caveats specific to it).
+  the EU GDPR Art. 9(2) special-category-data lawful-basis code validator,
+  and the EU EHDS (Regulation (EU) 2025/327) Article 3 primary-use
+  access-request validators (see the sections below for scope/caveats
+  specific to each).
 
   These are *format* checks, not *authority* checks: a structurally valid
   NPI is not guaranteed to be an NPI actually assigned by NPPES, and a
@@ -142,3 +144,61 @@
   doesn't guarantee."
   [s]
   (boolean (and (string? s) (contains? gdpr-art9-2-lawful-bases (str/lower-case s)))))
+
+;; --- EHDS Art. 3 primary-use access request (Regulation (EU) 2025/327) -----
+;;
+;; EHDS = the European Health Data Space Regulation (EU) 2025/327 of the
+;; European Parliament and of the Council of 11 February 2025, CELEX
+;; 32025R0327, in force 2025-03-26. Article 3 ("Right of natural persons to
+;; access their personal electronic health data") gives natural persons (1)
+;; a right to immediate, free, easily-readable *view* access to their
+;; priority-category electronic health data once it is registered in an EHR
+;; system, and (2) a right to *download* a free electronic copy of that same
+;; data in the European electronic health record exchange format. Article
+;; 3(3) lets a Member State restrict (delay) both rights, in accordance with
+;; Art. 23 GDPR, e.g. for patient-safety/ethical reasons.
+;;
+;; The verbatim Article 3(1)-(3) text this validator is based on was
+;; retrieved via a real-browser EUR-Lex session on 2026-07-08 (EUR-Lex blocks
+;; automated fetches with an AWS WAF JS challenge) and is archived at
+;; orgs/kotoba-lang/emr-claims-primary-sources/eu-ehds/ehds-article3-excerpt.md.
+;; Article 3 cross-references three other articles that have NOT been
+;; retrieved yet: Article 14 (the priority-categories list), Article 4 (the
+;; "electronic health data access services" definition) and Article 15 (the
+;; European electronic health record exchange format). Consistent with this
+;; codebase's rule against inventing unverified legal content, this
+;; namespace deliberately does NOT enumerate the Article 14 priority
+;; categories (only a boolean "is this a priority-category record" flag is
+;; modeled) and does NOT model the Article 15 exchange format's internal
+;; schema (only the fact that a download was requested "in the Art. 15
+;; format" is modeled, as an external citation, not a data structure).
+
+(def ehds-access-methods
+  "The two ways Article 3 lets a natural person exercise primary-use access
+  to their personal electronic health data: \"view\" (Art. 3(1) -- immediate,
+  free, easily-readable/consolidated access after EHR registration) and
+  \"download\" (Art. 3(2) -- free-of-charge electronic copy in the Article 15
+  exchange format). Article 3 defines no other access method."
+  #{"view" "download"})
+
+(defn valid-ehds-access-method?
+  "true if s (case-insensitive) is \"view\" or \"download\" -- the two
+  Article 3 primary-use access methods. Anything else (including the empty
+  string, nil, or a non-string) is rejected."
+  [s]
+  (boolean (and (string? s) (contains? ehds-access-methods (str/lower-case s)))))
+
+(defn valid-ehds-restriction?
+  "Cross-field check for Article 3(3): a Member-State restriction (a GDPR
+  Art. 23-aligned delay of Art. 3(1)/(2) access) must carry a reason --
+  an undocumented restriction would silently withhold a patient's access
+  right with no audit trail of why it was withheld. Takes the whole record
+  map (not a single field value), unlike this namespace's other validators:
+  returns true (pass) when `:restrictionApplied` is falsy/absent, or when it
+  is truthy and `:restrictionReason` is a non-blank string; false otherwise."
+  [data]
+  (let [applied (get data :restrictionApplied)
+        reason (get data :restrictionReason)]
+    (if applied
+      (boolean (and (string? reason) (not (str/blank? reason))))
+      true)))
