@@ -1,7 +1,9 @@
 (ns hl7-fhir.validation
   "Structural (format-only) validators for identifiers that a US healthcare
   claim actually carries on the wire: the CMS-1500 / UB-04 paper forms and
-  the X12 837 professional/institutional claim transaction set.
+  the X12 837 professional/institutional claim transaction set. Also holds
+  the EU GDPR Art. 9(2) special-category-data lawful-basis code validator
+  (see that section below for scope/caveats specific to it).
 
   These are *format* checks, not *authority* checks: a structurally valid
   NPI is not guaranteed to be an NPI actually assigned by NPPES, and a
@@ -89,3 +91,54 @@
            (re-matches #"^[0-9]{4}F$" u)
            (re-matches #"^[0-9]{4}T$" u)
            (re-matches #"^[A-V][0-9]{4}$" u))))))
+
+;; --- GDPR Art. 9(2) special-category-data lawful basis ----------------------
+;;
+;; Every clinical resource this actor models (Patient, Observation,
+;; Condition, ...) carries "data concerning health" within the meaning of
+;; Art. 9(1) of Regulation (EU) 2016/679 (GDPR, OJ L 119, 4.5.2016, p. 1),
+;; which prohibits processing such data outright unless one of the ten
+;; exceptions enumerated in Art. 9(2)(a)-(j) applies. This section validates
+;; only that a *code* naming one of those ten exceptions is well-formed --
+;; it cannot and does not verify that the cited exception is factually true
+;; for a given record (e.g. that explicit consent under (a) was actually
+;; obtained is a business-process fact outside a structural validator's
+;; reach), which mirrors the NPI/ICD-10-CM/CPT validators above only
+;; checking format, not authority.
+;;
+;; The point-letter labels and their paraphrased (non-verbatim) meanings
+;; below were checked against the consolidated Art. 9(2) text via EUR-Lex
+;; (CELEX:32016R0679) and gdpr-info.eu on 2026-07-08. Article 9 is one of
+;; the most litigated/cited GDPR provisions and its (a)-(j) structure has
+;; been stable since the Regulation's 2016 adoption, so -- unlike a newer or
+;; still-evolving instrument -- this list is treated as authoritative, not
+;; "representative only". It intentionally does not model any EU Member
+;; State's national implementing law (e.g. German BDSG Sec. 22, which adds
+;; conditions on top of (h)/(i)/(j) for health data specifically) -- that is
+;; explicitly out of scope for this pass.
+
+(def gdpr-art9-2-lawful-bases
+  "The ten Art. 9(2) exceptions that lift the Art. 9(1) prohibition on
+  processing special categories of personal data, keyed by the same
+  point-letter the Regulation itself uses. Map values are short paraphrased
+  labels for lookup/display, not the operative legal text -- see Article 9
+  of Regulation (EU) 2016/679 for the authoritative wording."
+  {"a" "explicit consent to processing for one or more specified purposes"
+   "b" "obligations/rights in employment, social security or social protection law"
+   "c" "vital interests, where the data subject is physically or legally incapable of consenting"
+   "d" "not-for-profit body (political/philosophical/religious/trade-union aim), members/regular contacts only, with safeguards"
+   "e" "personal data manifestly made public by the data subject"
+   "f" "establishment, exercise or defence of legal claims, or courts acting in a judicial capacity"
+   "g" "substantial public interest under proportionate Union or Member State law"
+   "h" "preventive or occupational medicine, medical diagnosis, health/social care or treatment, or management of health/social-care systems, under law or a contract with a health professional"
+   "i" "public health (e.g. serious cross-border health threats, quality/safety of health care, medicinal products or medical devices)"
+   "j" "archiving in the public interest, scientific/historical research, or statistical purposes per Art. 89(1)"})
+
+(defn valid-gdpr-art9-lawful-basis?
+  "true if s (case-insensitive) is one of the ten Art. 9(2) point-letters
+  (\"a\".. \"j\") that can lift the Art. 9(1) special-category-data
+  prohibition. Only the code's membership in that fixed ten-item set is
+  checked -- see the namespace-level caveat above about what this does and
+  doesn't guarantee."
+  [s]
+  (boolean (and (string? s) (contains? gdpr-art9-2-lawful-bases (str/lower-case s)))))

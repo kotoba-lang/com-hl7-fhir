@@ -49,3 +49,19 @@
       (is (false? (v/valid-procedure-code? code)) code)))
   (testing "non-string input is rejected, not thrown"
     (is (false? (v/valid-procedure-code? nil)))))
+
+(deftest gdpr-art9-lawful-basis-format
+  (testing "all ten Art. 9(2) point-letters are accepted"
+    (doseq [code ["a" "b" "c" "d" "e" "f" "g" "h" "i" "j"]]
+      (is (true? (v/valid-gdpr-art9-lawful-basis? code)) code)))
+  (testing "case-insensitive"
+    (is (true? (v/valid-gdpr-art9-lawful-basis? "H")))
+    (is (true? (v/valid-gdpr-art9-lawful-basis? "A"))))
+  (testing "codes outside the ten-item set are rejected"
+    (doseq [code ["k" "z" "aa" "9(2)(a)" "art9a" "" "1"]]
+      (is (false? (v/valid-gdpr-art9-lawful-basis? code)) code)))
+  (testing "the full label instead of the point-letter is rejected"
+    (is (false? (v/valid-gdpr-art9-lawful-basis? "explicit consent"))))
+  (testing "non-string input is rejected, not thrown"
+    (is (false? (v/valid-gdpr-art9-lawful-basis? nil)))
+    (is (false? (v/valid-gdpr-art9-lawful-basis? :a)))))

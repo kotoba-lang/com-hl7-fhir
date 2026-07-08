@@ -89,4 +89,22 @@ namespace hl7_fhir {
         updatedAt: datetime
     }
 
+    // Added by hand (ADR-2607083100), not by deepen_actors.py: EU GDPR
+    // Art. 9(2) special-category-data lawful-basis record. lawfulBasisArt9
+    // is format-validated in src/hl7_fhir/main.cljc's entity-specs
+    // (:validate), backed by src/hl7_fhir/validation.cljc
+    // (valid-gdpr-art9-lawful-basis?, checked against the ten Art. 9(2)(a)-(j)
+    // point-letters) -- this schema block documents the shape but the
+    // validator is the enforcement point, not this file.
+    entity Consent {
+        id: string @unique
+        resourceType: string
+        patientId: string
+        specialCategoryData: boolean
+        lawfulBasisArt9: string
+        status: string
+        createdAt: datetime
+        updatedAt: datetime
+    }
+
 }

@@ -96,3 +96,44 @@
           [body status] (m/handle-update s "Claim" (:id rec) {:billingProviderNpi "0000000000"})]
       (is (= 400 status))
       (is (str/includes? (get-in body [:error :message]) "billingProviderNpi")))))
+
+;; --- Consent: EU GDPR Art. 9(2) lawful-basis validation (ADR-2607083100) ---
+;; Same rationale as claim-domain-validation above: the generic `validation`
+;; deftest only covers missing-required / unknown-field rejection, which
+;; every entity shares. Consent is the second entity (after Claim) whose
+;; field carries a real domain-format constraint (one of the ten Art.
+;; 9(2)(a)-(j) point-letters), so it gets its own deftest that a naive
+;; string field would never reject.
+(def ^:private consent-sample
+  (:sample (first (filter #(= "Consent" (:entity %)) m/entity-specs))))
+
+(deftest consent-domain-validation
+  (testing "a fully valid consent record is accepted"
+    (let [s (m/fresh-store) [rec status] (m/handle-create s "Consent" consent-sample)]
+      (is (= 201 status))
+      (is (str/starts-with? (:id rec) "hl7fhir_cst_"))
+      (is (true? (:specialCategoryData rec)))))
+  (testing "each of the ten Art. 9(2) point-letters is independently accepted"
+    (doseq [code ["a" "b" "c" "d" "e" "f" "g" "h" "i" "j"]]
+      (let [s (m/fresh-store)
+            [_ status] (m/handle-create s "Consent" (assoc consent-sample :lawfulBasisArt9 code))]
+        (is (= 201 status) code))))
+  (testing "a lawful-basis code outside the ten-item set is rejected"
+    (let [s (m/fresh-store)
+          [body status] (m/handle-create s "Consent" (assoc consent-sample :lawfulBasisArt9 "z"))]
+      (is (= 400 status))
+      (is (str/includes? (get-in body [:error :message]) "lawfulBasisArt9"))))
+  (testing "the full exception label instead of the point-letter is rejected"
+    (let [s (m/fresh-store)
+          [_ status] (m/handle-create s "Consent" (assoc consent-sample :lawfulBasisArt9 "explicit consent"))]
+      (is (= 400 status))))
+  (testing "specialCategoryData coerces truthy wire values to boolean"
+    (let [s (m/fresh-store)
+          [rec _] (m/handle-create s "Consent" (assoc consent-sample :specialCategoryData "true"))]
+      (is (true? (:specialCategoryData rec)))))
+  (testing "update also enforces format validation on a present field"
+    (let [s (m/fresh-store)
+          [rec _] (m/handle-create s "Consent" consent-sample)
+          [body status] (m/handle-update s "Consent" (:id rec) {:lawfulBasisArt9 "zz"})]
+      (is (= 400 status))
+      (is (str/includes? (get-in body [:error :message]) "lawfulBasisArt9")))))

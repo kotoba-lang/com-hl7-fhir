@@ -13,11 +13,14 @@
   facts (`hl7_fhir.<Entity>/<field>`); `*store*` is the in-memory materialization
   used by the contract test and by the WASM runtime before a live engine binds.
 
-  The `Claim` entity is the one exception to \"resource shapes only\": its
-  `:validate` map wires real US billing-identifier format checks (NPI /
-  ICD-10-CM / CPT-HCPCS, see `hl7-fhir.validation`) into the generic
-  create/update handlers, so a claim with a malformed billing NPI or
-  diagnosis code is rejected with 400 instead of silently persisted."
+  The `Claim` and `Consent` entities are the exceptions to \"resource shapes
+  only\": their `:validate` maps wire real domain format checks into the
+  generic create/update handlers -- `Claim` for US billing identifiers (NPI
+  / ICD-10-CM / CPT-HCPCS) and `Consent` for the EU GDPR Art. 9(2)
+  special-category-data lawful-basis code (see `hl7-fhir.validation`) -- so
+  a claim with a malformed billing NPI, or a consent record citing a
+  lawful-basis code that isn't one of the Regulation's ten, is rejected
+  with 400 instead of silently persisted."
   (:require [clojure.string :as str]
             [hl7-fhir.validation :as validation]))
 
@@ -61,6 +64,25 @@
                :procedureCode validation/valid-procedure-code?}
     :sample {:resourceType "Claim" :billingProviderNpi "1234567893"
              :subscriberId "SUB123456" :diagnosisCode "E11.9" :procedureCode "99213"}
+    :refs {}}
+   ;; EU GDPR Art. 9(2) special-category-data lawful-basis record (ADR-2607083100
+   ;; EHR-compat EU increment). Every clinical resource above carries "data
+   ;; concerning health" per GDPR Art. 9(1) (Regulation (EU) 2016/679), which
+   ;; is prohibited unless one of the ten Art. 9(2)(a)-(j) exceptions applies.
+   ;; This entity records, per patient, which exception is being relied on.
+   ;; `lawfulBasisArt9` is always required (not conditional on
+   ;; `specialCategoryData`): in this actor every underlying resource is
+   ;; clinical/health data, so a Consent record's whole purpose is to
+   ;; document the Art. 9(2) basis for it -- `specialCategoryData` is an
+   ;; explicit machine-readable flag for downstream consumers (e.g. a
+   ;; ROPA/DPIA tool), not a condition this actor branches on.
+   {:entity "Consent" :plural "consents" :id-prefix "hl7fhir_cst"
+    :fields [:resourceType :patientId :specialCategoryData :lawfulBasisArt9 :status]
+    :required [:resourceType :patientId :specialCategoryData :lawfulBasisArt9]
+    :coerce {:specialCategoryData :bool}
+    :validate {:lawfulBasisArt9 validation/valid-gdpr-art9-lawful-basis?}
+    :sample {:resourceType "Consent" :patientId "hl7fhir_pat_sample0000000000"
+             :specialCategoryData true :lawfulBasisArt9 "h" :status "active"}
     :refs {}}])
 
 (def entities (mapv :entity entity-specs))
