@@ -4,7 +4,13 @@
             [hl7-fhir.main :as m]))
 
 (defn- dummy [field coerce] (case (get coerce field) :int 1 :float 1.0 :bool true (name field)))
-(defn- full-record [{:keys [required coerce]}] (into {} (map (fn [f] [f (dummy f coerce)]) required)))
+(defn- full-record
+  "A record satisfying an entity-spec's :required fields. Entities with
+  format `:validate`rs (e.g. Claim's NPI/ICD-10-CM/CPT checks) can't be
+  satisfied by the generic field-name-as-value heuristic, so they carry an
+  explicit known-good `:sample` in the spec and this prefers it."
+  [{:keys [required coerce sample]}]
+  (or sample (into {} (map (fn [f] [f (dummy f coerce)]) required))))
 
 (deftest route-surface
   (is (= (* 5 (count m/entity-specs)) (count m/routes)))
@@ -42,3 +48,51 @@
 (deftest healthz
   (let [[body status] (m/healthz)]
     (is (= 200 status)) (is (= "hl7_fhir-compat" (:actor body))) (is (= (set m/entities) (set (:entities body))))))
+
+;; --- Claim: US billing-identifier format validation (ADR-2607083000) -------
+;; The generic `validation` deftest above only covers missing-required /
+;; unknown-field rejection, which every entity shares. Claim is the one
+;; entity whose fields carry real domain-format constraints (NPI check
+;; digit, ICD-10-CM shape, CPT/HCPCS shape), so it gets its own deftest
+;; that a naive string field would never reject.
+(def ^:private claim-sample
+  (:sample (first (filter #(= "Claim" (:entity %)) m/entity-specs))))
+
+(deftest claim-domain-validation
+  (testing "a fully valid claim is accepted"
+    (let [s (m/fresh-store) [rec status] (m/handle-create s "Claim" claim-sample)]
+      (is (= 201 status))
+      (is (str/starts-with? (:id rec) "hl7fhir_cla_"))))
+  (testing "an invalid billing provider NPI (bad Luhn check digit) is rejected"
+    (let [s (m/fresh-store)
+          [body status] (m/handle-create s "Claim" (assoc claim-sample :billingProviderNpi "1234567890"))]
+      (is (= 400 status))
+      (is (str/includes? (get-in body [:error :message]) "billingProviderNpi"))))
+  (testing "an NPI that isn't 10 digits is rejected"
+    (let [s (m/fresh-store)
+          [_ status] (m/handle-create s "Claim" (assoc claim-sample :billingProviderNpi "123"))]
+      (is (= 400 status))))
+  (testing "a malformed ICD-10-CM diagnosis code is rejected"
+    (let [s (m/fresh-store)
+          [body status] (m/handle-create s "Claim" (assoc claim-sample :diagnosisCode "9999"))]
+      (is (= 400 status))
+      (is (str/includes? (get-in body [:error :message]) "diagnosisCode"))))
+  (testing "a well-formed ICD-10-CM code with an alpha third character is accepted"
+    (let [s (m/fresh-store)
+          [_ status] (m/handle-create s "Claim" (assoc claim-sample :diagnosisCode "C7A.00"))]
+      (is (= 201 status))))
+  (testing "a malformed procedure code is rejected"
+    (let [s (m/fresh-store)
+          [body status] (m/handle-create s "Claim" (assoc claim-sample :procedureCode "ABCDE"))]
+      (is (= 400 status))
+      (is (str/includes? (get-in body [:error :message]) "procedureCode"))))
+  (testing "a HCPCS Level II procedure code is accepted"
+    (let [s (m/fresh-store)
+          [_ status] (m/handle-create s "Claim" (assoc claim-sample :procedureCode "J1200"))]
+      (is (= 201 status))))
+  (testing "update also enforces format validation on a present field"
+    (let [s (m/fresh-store)
+          [rec _] (m/handle-create s "Claim" claim-sample)
+          [body status] (m/handle-update s "Claim" (:id rec) {:billingProviderNpi "0000000000"})]
+      (is (= 400 status))
+      (is (str/includes? (get-in body [:error :message]) "billingProviderNpi")))))

@@ -70,4 +70,23 @@ namespace hl7_fhir {
         updatedAt: datetime
     }
 
+    // Added by hand (ADR-2607083000), not by deepen_actors.py: CMS-1500 / UB-04
+    // / X12 837 professional-claim minimum field set. billingProviderNpi,
+    // diagnosisCode and procedureCode are format-validated in
+    // src/hl7_fhir/main.cljc's entity-specs (:validate), backed by
+    // src/hl7_fhir/validation.cljc (NPI Luhn check digit, ICD-10-CM shape,
+    // CPT/HCPCS shape) -- this schema block documents the shape but the
+    // validators are the enforcement point, not this file.
+    entity Claim {
+        id: string @unique
+        resourceType: string
+        billingProviderNpi: string
+        subscriberId: string
+        diagnosisCode: string
+        procedureCode: string
+        status: string
+        createdAt: datetime
+        updatedAt: datetime
+    }
+
 }
