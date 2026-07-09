@@ -90,26 +90,31 @@
              :specialCategoryData true :lawfulBasisArt9 "h" :status "active"}
     :refs {}}
    ;; EU EHDS (Regulation (EU) 2025/327) Article 3 primary-use access
-   ;; request (ADR-2607083200 EHDS Article 3 increment). Article 3(1)-(3) is
-   ;; the only portion of EHDS with a verified primary-source reading to
-   ;; hand -- see orgs/kotoba-lang/emr-claims-primary-sources/eu-ehds/
-   ;; ehds-article3-excerpt.md (verbatim excerpt, retrieved via a real-
-   ;; browser EUR-Lex session on 2026-07-08, CELEX:32025R0327). Article 14
-   ;; (the priority-categories list) and Article 15 (the exchange-format
-   ;; schema) are cross-referenced by Article 3 but not yet retrieved, so
-   ;; this entity deliberately does NOT enumerate priority categories
-   ;; (`priorityCategory` is only a boolean flag) or model the exchange
-   ;; format's internal structure -- see README for the scope note.
+   ;; request (ADR-2607083200 EHDS Article 3 increment; priorityCategory
+   ;; enumerated 2026-07-09 once Article 14 was retrieved). Article 3(1)-(3)
+   ;; and Article 14(1) are the portions of EHDS with a verified
+   ;; primary-source reading to hand -- see
+   ;; orgs/kotoba-lang/emr-claims-primary-sources/eu-ehds/
+   ;; ehds-article3-excerpt.md and ehds-article14-15-excerpt.md (verbatim
+   ;; excerpts, retrieved via a real-browser EUR-Lex session, CELEX:32025R0327).
+   ;; `priorityCategory` is now the closed 6-value enum Article 14(1)(a)-(f)
+   ;; lists verbatim. Article 15 (the European electronic health record
+   ;; exchange format) is cross-referenced by Article 3(2) but its technical
+   ;; schema is NOT modeled here: Article 15 itself delegates the concrete
+   ;; format to future European Commission implementing acts, so
+   ;; `accessMethod` only cites Article 15 by name -- see README for the
+   ;; scope note.
    {:entity "PatientAccessRequest" :plural "patientaccessrequests" :id-prefix "hl7fhir_par"
     :fields [:resourceType :patientId :priorityCategory :accessMethod
              :restrictionApplied :restrictionReason :status]
     :required [:resourceType :patientId :accessMethod]
-    :coerce {:priorityCategory :bool :restrictionApplied :bool}
-    :validate {:accessMethod validation/valid-ehds-access-method?}
+    :coerce {:restrictionApplied :bool}
+    :validate {:accessMethod validation/valid-ehds-access-method?
+               :priorityCategory validation/valid-ehds-priority-category?}
     :validate-record {:pred validation/valid-ehds-restriction?
                        :message "restrictionApplied requires a non-blank restrictionReason (EHDS Art. 3(3))"}
     :sample {:resourceType "PatientAccessRequest" :patientId "hl7fhir_pat_sample0000000000"
-             :priorityCategory true :accessMethod "view" :restrictionApplied false :status "active"}
+             :priorityCategory "patient-summary" :accessMethod "view" :restrictionApplied false :status "active"}
     :refs {}}])
 
 (def entities (mapv :entity entity-specs))

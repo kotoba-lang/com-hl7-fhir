@@ -80,6 +80,22 @@
     (is (false? (v/valid-ehds-access-method? nil)))
     (is (false? (v/valid-ehds-access-method? :view)))))
 
+(deftest ehds-priority-category-format
+  (testing "all six Article 14(1) priority categories are accepted"
+    (doseq [code ["patient-summary" "electronic-prescription" "electronic-dispensation"
+                  "medical-imaging" "medical-test-results" "discharge-report"]]
+      (is (true? (v/valid-ehds-priority-category? code)) code)))
+  (testing "case-insensitive"
+    (is (true? (v/valid-ehds-priority-category? "PATIENT-SUMMARY")))
+    (is (true? (v/valid-ehds-priority-category? "Discharge-Report"))))
+  (testing "any other value is rejected, including a Member-State-added national category"
+    (doseq [v ["vital-signs" "immunization-record" "" "patientsummary" "patient_summary"]]
+      (is (false? (v/valid-ehds-priority-category? v)) v)))
+  (testing "non-string input is rejected, not thrown"
+    (is (false? (v/valid-ehds-priority-category? nil)))
+    (is (false? (v/valid-ehds-priority-category? true)))
+    (is (false? (v/valid-ehds-priority-category? :patient-summary)))))
+
 (deftest ehds-restriction-cross-field
   (testing "no restriction applied passes regardless of reason"
     (is (true? (v/valid-ehds-restriction? {:restrictionApplied false})))

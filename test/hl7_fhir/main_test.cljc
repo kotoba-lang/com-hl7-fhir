@@ -187,7 +187,7 @@
     (let [s (m/fresh-store) [rec status] (m/handle-create s "PatientAccessRequest" access-request-sample)]
       (is (= 201 status))
       (is (str/starts-with? (:id rec) "hl7fhir_par_"))
-      (is (true? (:priorityCategory rec)))
+      (is (= "patient-summary" (:priorityCategory rec)))
       (is (false? (:restrictionApplied rec)))))
   (testing "a download request is accepted"
     (let [s (m/fresh-store)
@@ -216,10 +216,22 @@
                                                 :restrictionReason "Art. 23 GDPR patient-safety delay"))]
       (is (= 201 status))
       (is (true? (:restrictionApplied rec)))))
-  (testing "priorityCategory coerces truthy wire values to boolean"
+  (testing "priorityCategory is case-insensitive"
     (let [s (m/fresh-store)
-          [rec _] (m/handle-create s "PatientAccessRequest" (assoc access-request-sample :priorityCategory "true"))]
-      (is (true? (:priorityCategory rec)))))
+          [rec status] (m/handle-create s "PatientAccessRequest" (assoc access-request-sample :priorityCategory "DISCHARGE-REPORT"))]
+      (is (= 201 status))
+      (is (= "DISCHARGE-REPORT" (:priorityCategory rec)))))
+  (testing "a priorityCategory outside the Article 14(1) six-value enum is rejected"
+    (let [s (m/fresh-store)
+          [body status] (m/handle-create s "PatientAccessRequest" (assoc access-request-sample :priorityCategory "vital-signs"))]
+      (is (= 400 status))
+      (is (str/includes? (get-in body [:error :message]) "priorityCategory"))))
+  (testing "update enforces the priorityCategory format check on a present field"
+    (let [s (m/fresh-store)
+          [rec _] (m/handle-create s "PatientAccessRequest" access-request-sample)
+          [body status] (m/handle-update s "PatientAccessRequest" (:id rec) {:priorityCategory "vital-signs"})]
+      (is (= 400 status))
+      (is (str/includes? (get-in body [:error :message]) "priorityCategory"))))
   (testing "update enforces the accessMethod format check on a present field"
     (let [s (m/fresh-store)
           [rec _] (m/handle-create s "PatientAccessRequest" access-request-sample)

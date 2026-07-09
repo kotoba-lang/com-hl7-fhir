@@ -162,16 +162,21 @@
 ;; retrieved via a real-browser EUR-Lex session on 2026-07-08 (EUR-Lex blocks
 ;; automated fetches with an AWS WAF JS challenge) and is archived at
 ;; orgs/kotoba-lang/emr-claims-primary-sources/eu-ehds/ehds-article3-excerpt.md.
-;; Article 3 cross-references three other articles that have NOT been
-;; retrieved yet: Article 14 (the priority-categories list), Article 4 (the
-;; "electronic health data access services" definition) and Article 15 (the
-;; European electronic health record exchange format). Consistent with this
-;; codebase's rule against inventing unverified legal content, this
-;; namespace deliberately does NOT enumerate the Article 14 priority
-;; categories (only a boolean "is this a priority-category record" flag is
-;; modeled) and does NOT model the Article 15 exchange format's internal
-;; schema (only the fact that a download was requested "in the Art. 15
-;; format" is modeled, as an external citation, not a data structure).
+;; Article 3 cross-references three other articles: Article 14 (the
+;; priority-categories list) and Article 4 (the "electronic health data
+;; access services" definition) and Article 15 (the European electronic
+;; health record exchange format). Article 14(1) was retrieved the same way
+;; on 2026-07-09 and is archived at eu-ehds/ehds-article14-15-excerpt.md, so
+;; the priority categories ARE now enumerated below (`ehds-priority-categories`
+;; / `valid-ehds-priority-category?`). Article 4 remains unretrieved. Article
+;; 15 was retrieved too, but it does NOT itself define a concrete exchange
+;; format schema -- it delegates that to future European Commission
+;; implementing acts (secondary legislation, not yet published) -- so,
+;; consistent with this codebase's rule against inventing unverified legal
+;; content, this namespace still does NOT model the Article 15 exchange
+;; format's internal schema (only the fact that a download was requested "in
+;; the Art. 15 format" is modeled, as an external citation, not a data
+;; structure).
 
 (def ehds-access-methods
   "The two ways Article 3 lets a natural person exercise primary-use access
@@ -187,6 +192,42 @@
   string, nil, or a non-string) is rejected."
   [s]
   (boolean (and (string? s) (contains? ehds-access-methods (str/lower-case s)))))
+
+;; --- EHDS Art. 14(1) priority categories (Regulation (EU) 2025/327) --------
+;;
+;; Article 14 ("Priority categories of personal electronic health data for
+;; primary use") is the article Article 3 cross-references for what counts
+;; as a "priority category" record. Its verbatim text was retrieved via a
+;; real-browser EUR-Lex session on 2026-07-09 (same WAF-workaround method as
+;; Article 3) and is archived at
+;; orgs/kotoba-lang/emr-claims-primary-sources/eu-ehds/ehds-article14-15-excerpt.md.
+;; Article 14(1) lists exactly six priority categories, (a)-(f); Annex I's
+;; per-category "main characteristics" were not retrieved and are not
+;; modeled here (future work if a more granular model is ever needed).
+;; Article 14(1) also lets a Member State add national categories on top of
+;; these six via its own national law -- that per-Member-State extension is
+;; explicitly out of scope for this pass (same discipline as the GDPR Art.
+;; 9(2) validator above not modeling national implementing law).
+
+(def ehds-priority-categories
+  "The six Article 14(1)(a)-(f) priority categories of personal electronic
+  health data for primary use, kebab-cased from the Regulation's own
+  wording: \"patient-summary\" (a), \"electronic-prescription\" (b),
+  \"electronic-dispensation\" (c), \"medical-imaging\" (d, \"medical imaging
+  studies and related imaging reports\"), \"medical-test-results\" (e,
+  \"medical test results, including laboratory and other diagnostic results
+  and related reports\"), \"discharge-report\" (f)."
+  #{"patient-summary" "electronic-prescription" "electronic-dispensation"
+    "medical-imaging" "medical-test-results" "discharge-report"})
+
+(defn valid-ehds-priority-category?
+  "true if s (case-insensitive) is one of the six Article 14(1) priority
+  categories. Anything else (including the empty string, nil, or a
+  non-string) is rejected -- this deliberately does not accept a
+  Member-State-added national category (Article 14(1) final paragraph),
+  which is out of scope for this pass."
+  [s]
+  (boolean (and (string? s) (contains? ehds-priority-categories (str/lower-case s)))))
 
 (defn valid-ehds-restriction?
   "Cross-field check for Article 3(3): a Member-State restriction (a GDPR

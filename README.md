@@ -119,13 +119,9 @@ persons to access their personal electronic health data"), paragraphs
 (1)-(3) only** -- the only EHDS text with a verified primary-source reading
 to hand:
 
-- `priorityCategory` (boolean) -- whether the underlying record belongs to
-  the "priority categories" Article 3(1)/(2) refer to. **This is a bare
-  flag, not an enumerated category list**: the priority-categories list
-  itself is defined in **Article 14**, which has not yet been retrieved
-  from a primary source -- inventing that list here would be exactly the
-  kind of unverified-legal-content guess this codebase's working agreement
-  forbids.
+- `priorityCategory` (enum, one of the 6 Article 14(1)(a)-(f) values, see the
+  2026-07-09 maturity note below -- was a bare boolean flag at the time this
+  section was originally written, before Article 14 had been retrieved).
 - `accessMethod` (enum `"view"` / `"download"`, case-insensitive, required)
   -- `"view"` is Art. 3(1) (immediate, free, easily-readable/consolidated
   access once data is registered in an EHR system); `"download"` is
@@ -146,18 +142,15 @@ to hand:
 
 **Explicitly out of scope / not implemented, and why**: Article 3
 cross-references three other articles that were confirmed to exist but
-whose text has **not** been retrieved yet -- Article 14 (the
-priority-categories list itself), Article 4 (the "electronic health data
-access services" definition) and Article 15 (the European electronic health
-record exchange format's technical schema). None of the three is modeled:
-`priorityCategory` stays a boolean flag (no category enum), `accessMethod`
-only names Article 15 as an external format citation (no exchange-format
-data structure), and no `electronic health data access service` entity is
-added. This is the same "verified primary source or explicit not-yet-done
-note, never a guess" discipline the GDPR Art. 9(2) pass above follows.
-Fetching Article 14/15 (ideally via the same real-browser EUR-Lex
-navigation this pass used, since automated fetches are WAF-blocked) is left
-for a follow-up increment.
+whose text had **not** been retrieved yet at the time this section was
+written -- Article 14 (the priority-categories list itself), Article 4 (the
+"electronic health data access services" definition) and Article 15 (the
+European electronic health record exchange format's technical schema).
+Article 14 and Article 15 have since been retrieved (see the 2026-07-09
+maturity note below); Article 4 is still not retrieved and no `electronic
+health data access service` entity is added. This is the same "verified
+primary source or explicit not-yet-done note, never a guess" discipline the
+GDPR Art. 9(2) pass above follows.
 
 See `src/hl7_fhir/validation.cljc` (`valid-ehds-access-method?` /
 `valid-ehds-restriction?`, with the scope caveats inline) and
@@ -168,3 +161,47 @@ See `src/hl7_fhir/validation.cljc` (`valid-ehds-access-method?` /
 rejected, a restriction without a reason rejected on both create and merged
 update, a restriction with a reason accepted). `bb test`: 14 deftests / 256
 assertions as of this pass (up from 11/203).
+
+## Maturity note (2026-07-09) -- EU: EHDS Article 14 priority categories (Regulation (EU) 2025/327)
+
+Follow-up closing the item the 2026-07-08 EHDS Article 3 pass above
+explicitly deferred: Article 14 ("Priority categories of personal
+electronic health data for primary use") and the referenced part of
+Article 15 ("European electronic health record exchange format") were
+retrieved via the same real-browser EUR-Lex navigation method (automated
+`curl`/headless fetches are AWS-WAF-blocked). The excerpt is archived,
+with retrieval-method provenance, at
+[`kotoba-lang/emr-claims-primary-sources`](https://github.com/kotoba-lang/emr-claims-primary-sources)'s
+`eu-ehds/ehds-article14-15-excerpt.md`.
+
+- `priorityCategory` is now a closed 6-value enum matching **Article
+  14(1)(a)-(f) verbatim**: `patient-summary` (a), `electronic-prescription`
+  (b), `electronic-dispensation` (c), `medical-imaging` (d, "medical
+  imaging studies and related imaging reports"), `medical-test-results` (e,
+  "medical test results, including laboratory and other diagnostic results
+  and related reports"), `discharge-report` (f). Case-insensitive,
+  validated by `hl7-fhir.validation/valid-ehds-priority-category?`; not
+  required (unlike `accessMethod`), but any *present* value outside the six
+  is rejected with 400. Annex I's per-category "main characteristics" and
+  Article 14(1)'s allowance for Member States to add national categories on
+  top of the six are both **not** modeled (out of scope for this pass, same
+  discipline as GDPR Art. 9(2) not modeling national implementing law).
+- **`accessMethod` / Article 15 stays a citation only.** Article 15 does
+  *not* itself define the concrete technical schema of the "European
+  electronic health record exchange format" -- it delegates that to future
+  European Commission *implementing acts* (secondary legislation, not yet
+  published), covering harmonised datasets, coding systems, and technical
+  interoperability specifications. Inventing an internal schema from
+  Article 15's framing text would be exactly the kind of unverified-legal
+  -content guess this codebase's working agreement forbids, so `accessMethod`
+  continues to only name the format by reference (`"download"`), with no
+  exchange-format data structure added.
+
+See `src/hl7_fhir/validation.cljc` (`ehds-priority-categories` /
+`valid-ehds-priority-category?`, with the scope caveats inline) and
+`test/hl7_fhir/validation_test.cljc`'s `ehds-priority-category-format`
+deftest / `test/hl7_fhir/main_test.cljc`'s
+`patient-access-request-domain-validation` deftest for pass/fail coverage
+(all six categories and case-insensitivity accepted, an out-of-set value
+rejected on both create and update). `bb test`: 16 deftests / 438
+assertions as of this pass (up from 14/256).
