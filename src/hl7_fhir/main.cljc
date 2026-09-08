@@ -26,7 +26,7 @@
   lawful-basis code that isn't one of the Regulation's ten, or an access
   request that flags a restriction without recording why, is rejected with
   400 instead of silently persisted."
-  (:require [clojure.string :as str]
+  (:require [kotoba.lang.text :as str]
             [hl7-fhir.validation :as validation]))
 
 (def ns-prefix "hl7_fhir")
@@ -153,7 +153,7 @@
         :else 0.0))
 
 (defn as-bool [v]
-  (if (nil? v) false (contains? #{"1" "true" "yes" "on" true} (if (string? v) (str/lower-case v) v))))
+  (if (nil? v) false (contains? #{"1" "true" "yes" "on" true} (if (string? v) (str/lower v) v))))
 
 (defn coerce-field [kind v]
   (case kind :int (as-int v) :float (as-float v) :bool (as-bool v) v))
