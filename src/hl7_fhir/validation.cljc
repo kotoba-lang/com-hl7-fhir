@@ -27,7 +27,7 @@
   - CPT / HCPCS Level II (procedure code): CPT Category I (5 digits,
     00100-99499), CPT Category II (4 digits + F), CPT Category III (4
     digits + T), or HCPCS Level II (1 letter A-V + 4 digits)."
-  (:require [clojure.string :as str]))
+  (:require [kotoba.lang.text :as str]))
 
 ;; --- shared helpers -------------------------------------------------------
 
@@ -76,7 +76,7 @@
   E11.9, Z00.00, S72.001A, C7A.00 (neuroendocrine tumor category), U07.1
   (COVID-19, added to the US CM list in 2020)."
   [s]
-  (boolean (and (string? s) (re-matches icd10-cm-pattern (str/upper-case s)))))
+  (boolean (and (string? s) (re-matches icd10-cm-pattern (str/upper s)))))
 
 ;; --- CPT / HCPCS Level II procedure code ------------------------------------
 
@@ -87,7 +87,7 @@
   [s]
   (boolean
    (when (string? s)
-     (let [u (str/upper-case s)]
+     (let [u (str/upper s)]
        (or (and (re-matches #"^[0-9]{5}$" u)
                 (<= 100 (parse-long* u) 99499))
            (re-matches #"^[0-9]{4}F$" u)
@@ -143,7 +143,7 @@
   checked -- see the namespace-level caveat above about what this does and
   doesn't guarantee."
   [s]
-  (boolean (and (string? s) (contains? gdpr-art9-2-lawful-bases (str/lower-case s)))))
+  (boolean (and (string? s) (contains? gdpr-art9-2-lawful-bases (str/lower s)))))
 
 ;; --- EHDS Art. 3 primary-use access request (Regulation (EU) 2025/327) -----
 ;;
@@ -191,7 +191,7 @@
   Article 3 primary-use access methods. Anything else (including the empty
   string, nil, or a non-string) is rejected."
   [s]
-  (boolean (and (string? s) (contains? ehds-access-methods (str/lower-case s)))))
+  (boolean (and (string? s) (contains? ehds-access-methods (str/lower s)))))
 
 ;; --- EHDS Art. 14(1) priority categories (Regulation (EU) 2025/327) --------
 ;;
@@ -227,7 +227,7 @@
   Member-State-added national category (Article 14(1) final paragraph),
   which is out of scope for this pass."
   [s]
-  (boolean (and (string? s) (contains? ehds-priority-categories (str/lower-case s)))))
+  (boolean (and (string? s) (contains? ehds-priority-categories (str/lower s)))))
 
 (defn valid-ehds-restriction?
   "Cross-field check for Article 3(3): a Member-State restriction (a GDPR
