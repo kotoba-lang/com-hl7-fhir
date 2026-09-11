@@ -37,7 +37,7 @@ docstring caveats about what "format valid" does and doesn't guarantee) and
 `test/hl7_fhir/validation_test.cljk` / the `claim-domain-validation` deftest
 in `test/hl7_fhir/main_test.cljk` for pass/fail coverage (bad NPI check
 digit, wrong length, malformed ICD-10-CM, malformed CPT/HCPCS, and that
-`handle-update` enforces the same checks). `bb test` runs both files
+`handle-update` enforces the same checks). `kbb -M:test` runs both files
 (9 deftests / 148 assertions as of this pass).
 
 Not done in this pass (left for a follow-up increment, one repo/topic at a
@@ -97,7 +97,7 @@ See `src/hl7_fhir/validation.cljk` (`gdpr-art9-2-lawful-bases` /
 deftest / `test/hl7_fhir/main_test.cljk`'s `consent-domain-validation`
 deftest for pass/fail coverage (all ten point-letters accepted, an
 out-of-set code and the full exception label both rejected, and that
-`handle-update` enforces the same check). `bb test`: 11 deftests / 203
+`handle-update` enforces the same check). `kbb -M:test`: 11 deftests / 203
 assertions as of this pass (up from 9/148).
 
 ## Maturity note (2026-07-08, ADR-2607083200) -- EU: EHDS Article 3 (Regulation (EU) 2025/327)
@@ -159,7 +159,7 @@ See `src/hl7_fhir/validation.cljk` (`valid-ehds-access-method?` /
 `patient-access-request-domain-validation` deftest for pass/fail coverage
 (both access methods and case-insensitivity accepted, an out-of-set method
 rejected, a restriction without a reason rejected on both create and merged
-update, a restriction with a reason accepted). `bb test`: 14 deftests / 256
+update, a restriction with a reason accepted). `kbb -M:test`: 14 deftests / 256
 assertions as of this pass (up from 11/203).
 
 ## Maturity note (2026-07-09) -- EU: EHDS Article 14 priority categories (Regulation (EU) 2025/327)
@@ -203,5 +203,5 @@ See `src/hl7_fhir/validation.cljk` (`ehds-priority-categories` /
 deftest / `test/hl7_fhir/main_test.cljk`'s
 `patient-access-request-domain-validation` deftest for pass/fail coverage
 (all six categories and case-insensitivity accepted, an out-of-set value
-rejected on both create and update). `bb test`: 16 deftests / 438
+rejected on both create and update). `kbb -M:test`: 16 deftests / 438
 assertions as of this pass (up from 14/256).
