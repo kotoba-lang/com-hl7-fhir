@@ -73,8 +73,8 @@ namespace hl7_fhir {
     // Added by hand (ADR-2607083000), not by deepen_actors.py: CMS-1500 / UB-04
     // / X12 837 professional-claim minimum field set. billingProviderNpi,
     // diagnosisCode and procedureCode are format-validated in
-    // src/hl7_fhir/main.cljc's entity-specs (:validate), backed by
-    // src/hl7_fhir/validation.cljc (NPI Luhn check digit, ICD-10-CM shape,
+    // src/hl7_fhir/main.cljk's entity-specs (:validate), backed by
+    // src/hl7_fhir/validation.cljk (NPI Luhn check digit, ICD-10-CM shape,
     // CPT/HCPCS shape) -- this schema block documents the shape but the
     // validators are the enforcement point, not this file.
     entity Claim {
@@ -91,8 +91,8 @@ namespace hl7_fhir {
 
     // Added by hand (ADR-2607083100), not by deepen_actors.py: EU GDPR
     // Art. 9(2) special-category-data lawful-basis record. lawfulBasisArt9
-    // is format-validated in src/hl7_fhir/main.cljc's entity-specs
-    // (:validate), backed by src/hl7_fhir/validation.cljc
+    // is format-validated in src/hl7_fhir/main.cljk's entity-specs
+    // (:validate), backed by src/hl7_fhir/validation.cljk
     // (valid-gdpr-art9-lawful-basis?, checked against the ten Art. 9(2)(a)-(j)
     // point-letters) -- this schema block documents the shape but the
     // validator is the enforcement point, not this file.
@@ -112,8 +112,8 @@ namespace hl7_fhir {
     // accessMethod is format-validated (view/download) and
     // restrictionApplied/restrictionReason are cross-field-validated
     // (restrictionApplied=true requires a non-blank restrictionReason) in
-    // src/hl7_fhir/main.cljc's entity-specs (:validate / :validate-record),
-    // backed by src/hl7_fhir/validation.cljc (valid-ehds-access-method?,
+    // src/hl7_fhir/main.cljk's entity-specs (:validate / :validate-record),
+    // backed by src/hl7_fhir/validation.cljk (valid-ehds-access-method?,
     // valid-ehds-restriction?) -- this schema block documents the shape but
     // the validators are the enforcement point, not this file.
     // priorityCategory is intentionally a bare boolean, not an enumerated

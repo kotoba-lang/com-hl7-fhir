@@ -32,10 +32,10 @@ actual format validation wired into the generic `handle-create`/
 - `procedureCode` -- CPT Category I/II/III or HCPCS Level II structural
   shape.
 
-See `src/hl7_fhir/validation.cljc` (pure validators, with their own
+See `src/hl7_fhir/validation.cljk` (pure validators, with their own
 docstring caveats about what "format valid" does and doesn't guarantee) and
-`test/hl7_fhir/validation_test.cljc` / the `claim-domain-validation` deftest
-in `test/hl7_fhir/main_test.cljc` for pass/fail coverage (bad NPI check
+`test/hl7_fhir/validation_test.cljk` / the `claim-domain-validation` deftest
+in `test/hl7_fhir/main_test.cljk` for pass/fail coverage (bad NPI check
 digit, wrong length, malformed ICD-10-CM, malformed CPT/HCPCS, and that
 `handle-update` enforces the same checks). `bb test` runs both files
 (9 deftests / 148 assertions as of this pass).
@@ -91,10 +91,10 @@ to guess at EHDS-specific field names/codes; and no EU Member State's
 national implementing law (e.g. German BDSG Sec. 22) is modeled -- this
 stays at GDPR-regulation level, per the task's explicit scope guardrail.
 
-See `src/hl7_fhir/validation.cljc` (`gdpr-art9-2-lawful-bases` /
+See `src/hl7_fhir/validation.cljk` (`gdpr-art9-2-lawful-bases` /
 `valid-gdpr-art9-lawful-basis?`, with the accuracy/scope caveats inline) and
-`test/hl7_fhir/validation_test.cljc`'s `gdpr-art9-lawful-basis-format`
-deftest / `test/hl7_fhir/main_test.cljc`'s `consent-domain-validation`
+`test/hl7_fhir/validation_test.cljk`'s `gdpr-art9-lawful-basis-format`
+deftest / `test/hl7_fhir/main_test.cljk`'s `consent-domain-validation`
 deftest for pass/fail coverage (all ten point-letters accepted, an
 out-of-set code and the full exception label both rejected, and that
 `handle-update` enforces the same check). `bb test`: 11 deftests / 203
@@ -152,10 +152,10 @@ health data access service` entity is added. This is the same "verified
 primary source or explicit not-yet-done note, never a guess" discipline the
 GDPR Art. 9(2) pass above follows.
 
-See `src/hl7_fhir/validation.cljc` (`valid-ehds-access-method?` /
+See `src/hl7_fhir/validation.cljk` (`valid-ehds-access-method?` /
 `valid-ehds-restriction?`, with the scope caveats inline) and
-`test/hl7_fhir/validation_test.cljc`'s `ehds-access-method-format` /
-`ehds-restriction-cross-field` deftests / `test/hl7_fhir/main_test.cljc`'s
+`test/hl7_fhir/validation_test.cljk`'s `ehds-access-method-format` /
+`ehds-restriction-cross-field` deftests / `test/hl7_fhir/main_test.cljk`'s
 `patient-access-request-domain-validation` deftest for pass/fail coverage
 (both access methods and case-insensitivity accepted, an out-of-set method
 rejected, a restriction without a reason rejected on both create and merged
@@ -197,10 +197,10 @@ with retrieval-method provenance, at
   continues to only name the format by reference (`"download"`), with no
   exchange-format data structure added.
 
-See `src/hl7_fhir/validation.cljc` (`ehds-priority-categories` /
+See `src/hl7_fhir/validation.cljk` (`ehds-priority-categories` /
 `valid-ehds-priority-category?`, with the scope caveats inline) and
-`test/hl7_fhir/validation_test.cljc`'s `ehds-priority-category-format`
-deftest / `test/hl7_fhir/main_test.cljc`'s
+`test/hl7_fhir/validation_test.cljk`'s `ehds-priority-category-format`
+deftest / `test/hl7_fhir/main_test.cljk`'s
 `patient-access-request-domain-validation` deftest for pass/fail coverage
 (all six categories and case-insensitivity accepted, an out-of-set value
 rejected on both create and update). `bb test`: 16 deftests / 438
