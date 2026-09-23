@@ -1,5 +1,5 @@
 (ns hl7-fhir.main-test
-  (:require [clojure.test :refer [deftest is testing run-tests]]
+  (:require [kotoba.test :refer [deftest is testing run-tests]]
             [kotoba.lang.text :as str]
             [hl7-fhir.main :as m]))
 
