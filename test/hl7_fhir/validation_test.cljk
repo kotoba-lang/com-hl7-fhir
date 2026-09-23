@@ -1,5 +1,5 @@
 (ns hl7-fhir.validation-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [kotoba.test :refer [deftest is testing]]
             [hl7-fhir.validation :as v]))
 
 (deftest npi-format
