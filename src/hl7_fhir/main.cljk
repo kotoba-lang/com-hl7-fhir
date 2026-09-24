@@ -26,7 +26,7 @@
   lawful-basis code that isn't one of the Regulation's ten, or an access
   request that flags a restriction without recording why, is rejected with
   400 instead of silently persisted."
-  (:require [kotoba.lang.text :as str]
+  (:require [kotoba.lang.coll :as kcoll] [kotoba.time :as kt] [kotoba.lang.text :as str]
             [hl7-fhir.validation :as validation]))
 
 (def ns-prefix "hl7_fhir")
@@ -129,13 +129,20 @@
                entity-specs)))
 
 ;; --- platform primitives ---
-(defn now []
-  #?(:clj (str (java.time.Instant/now))
-     :cljs (.toISOString (js/Date.))))
+(defn system-clock
+  "The host boundary: epoch-millis from the host wall clock -- the one place
+  this namespace reads time. Everything else is handed a `clock` (the
+  kotoba.time/now contract: `(clock)` returns epoch-millis)."
+  []
+  #?(:clj (System/currentTimeMillis) :cljs (.now js/Date)))
+
+(defn now
+  "UTC ISO-8601 of `(clock)`, whole seconds (kotoba.time/->iso8601)."
+  [clock]
+  (kt/->iso8601 (kt/now clock)))
 
 (defn- rand-hex16 []
-  #?(:clj (subs (str/replace (str (java.util.UUID/randomUUID)) "-" "") 0 16)
-     :cljs (subs (str/replace (str (random-uuid)) "-" "") 0 16)))
+  (subs (str/replace (str (random-uuid)) "-" "") 0 16))
 
 (defn new-id [prefix] (str prefix "_" (rand-hex16)))
 
@@ -256,7 +263,7 @@
   (let [limit (min (max (or (let [l (as-int (get params :limit))] (when (pos? l) l)) default-limit) 1) max-limit)
         start (get params :starting_after)
         rows (if (some? start)
-               (let [ids (mapv :id rows) idx (.indexOf ^java.util.List ids start)]
+               (let [ids (mapv :id rows) idx (kcoll/index-of ids start)]
                  #?(:clj (if (>= idx 0) (vec (drop (inc idx) rows)) rows)
                     :cljs (let [i (.indexOf (to-array (mapv :id rows)) start)] (if (>= i 0) (vec (drop (inc i) rows)) rows))))
                rows)
@@ -275,19 +282,21 @@
 (defn- spec-for [entity] (first (filter #(= (:entity %) entity) entity-specs)))
 (defn- not-found [] [{:error {:message "Not found" :type "not_found"}} 404])
 
-(defn handle-create [store entity data]
-  (let [{:keys [fields required coerce id-prefix validate]
-         record-spec :validate-record} (spec-for entity)]
-    (or (some-> (reject-non-map data) (vector 400))
-        (some-> (reject-unknown data fields) (vector 400))
-        (some-> (require-fields data required) (vector 400))
-        (some-> (validate-fields data validate) (vector 400))
-        (let [base {:id (new-id id-prefix)}
-              rec (reduce (fn [m f] (assoc m f (coerce-field (get coerce f) (get data f)))) base fields)]
-          (or (some-> (validate-record rec record-spec) (vector 400))
-              (let [rec (assoc rec :createdAt (now) :updatedAt (now))]
-                (persist! store entity rec)
-                [rec 201]))))))
+(defn handle-create
+  ([store entity data] (handle-create store entity data system-clock))
+  ([store entity data clock]
+   (let [{:keys [fields required coerce id-prefix validate]
+          record-spec :validate-record} (spec-for entity)]
+     (or (some-> (reject-non-map data) (vector 400))
+         (some-> (reject-unknown data fields) (vector 400))
+         (some-> (require-fields data required) (vector 400))
+         (some-> (validate-fields data validate) (vector 400))
+         (let [base {:id (new-id id-prefix)}
+               rec (reduce (fn [m f] (assoc m f (coerce-field (get coerce f) (get data f)))) base fields)]
+           (or (some-> (validate-record rec record-spec) (vector 400))
+               (let [rec (assoc rec :createdAt (now clock) :updatedAt (now clock))]
+                 (persist! store entity rec)
+                 [rec 201])))))))
 
 (defn handle-list [store entity params]
   (let [{:keys [fields]} (spec-for entity)
@@ -299,20 +308,22 @@
   (let [{:keys [refs]} (spec-for entity) rows (query store entity id)]
     (if (empty? rows) (not-found) [(expand store (first rows) params refs) 200])))
 
-(defn handle-update [store entity id data]
-  (let [{:keys [fields validate] record-spec :validate-record} (spec-for entity)
-        rows (query store entity id)]
-    (if (empty? rows)
-      (not-found)
-      (or (some-> (reject-non-map data) (vector 400))
-          (some-> (reject-unknown data fields) (vector 400))
-          (some-> (validate-fields data validate) (vector 400))
-          (let [merged (reduce-kv (fn [m k v] (if (#{:id :createdAt} k) m (assoc m k v)))
-                                  (first rows) data)]
-            (or (some-> (validate-record merged record-spec) (vector 400))
-                (let [rec (assoc merged :updatedAt (now))]
-                  (persist! store entity rec)
-                  [rec 200])))))))
+(defn handle-update
+  ([store entity id data] (handle-update store entity id data system-clock))
+  ([store entity id data clock]
+   (let [{:keys [fields validate] record-spec :validate-record} (spec-for entity)
+         rows (query store entity id)]
+     (if (empty? rows)
+       (not-found)
+       (or (some-> (reject-non-map data) (vector 400))
+           (some-> (reject-unknown data fields) (vector 400))
+           (some-> (validate-fields data validate) (vector 400))
+           (let [merged (reduce-kv (fn [m k v] (if (#{:id :createdAt} k) m (assoc m k v)))
+                                   (first rows) data)]
+             (or (some-> (validate-record merged record-spec) (vector 400))
+                 (let [rec (assoc merged :updatedAt (now clock))]
+                   (persist! store entity rec)
+                   [rec 200]))))))))
 
 (defn handle-delete [store entity id]
   (if (empty? (query store entity id)) (not-found) [(retract! store entity id) 200]))
